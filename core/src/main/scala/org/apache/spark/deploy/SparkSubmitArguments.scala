@@ -39,6 +39,7 @@ import org.apache.spark.util.Utils
 /**
  * Parses and encapsulates arguments from the spark-submit script.
  * The env argument is used for testing.
+ * spark  提交的 相关参数
  */
 private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, String] = sys.env)
   extends SparkSubmitArgumentsParser with Logging {

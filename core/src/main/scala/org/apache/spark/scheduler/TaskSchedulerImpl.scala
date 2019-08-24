@@ -51,6 +51,16 @@ import org.apache.spark.util.{AccumulatorV2, SystemClock, ThreadUtils, Utils}
  * acquire a lock on us, so we need to make sure that we don't try to lock the backend while
  * we are holding a lock on ourselves.
  */
+
+
+/**
+ *
+ * taskschedulerImpl底层通过操作一个   schedulerbackend  针对不同种类的 cluster(standalone yarn mesos)来调度task
+ * 他可以通过使用一个LocalBakend并且将 isLocal  参数设置 为 true  来 在本地模式下工作
+ * 它负责处理一些通用的逻辑 ，比如说决定多个job 的 调度顺序，启动推测任务执行
+ * 客户端应用 首先 调用他的 inintialize()  方法 和 start() 方法 ，然后通过 runtask()  方法 提交 task Sets
+ *
+ */
 private[spark] class TaskSchedulerImpl(
     val sc: SparkContext,
     val maxTaskFailures: Int,
@@ -161,9 +171,16 @@ private[spark] class TaskSchedulerImpl(
     this.dagScheduler = dagScheduler
   }
 
+  /**
+   * 初始化的方法
+   * 传入 一个 backend 的 对象
+   * @param backend
+   */
+
   def initialize(backend: SchedulerBackend) {
     this.backend = backend
     schedulableBuilder = {
+      //  根据 scheduler  模式 来 创建  不同的schedulableBuilder
       schedulingMode match {
         case SchedulingMode.FIFO =>
           new FIFOSchedulableBuilder(rootPool)
@@ -174,12 +191,14 @@ private[spark] class TaskSchedulerImpl(
           s"$schedulingMode")
       }
     }
+    // 最后创建 调度池
     schedulableBuilder.buildPools()
   }
 
   def newTaskId(): Long = nextTaskId.getAndIncrement()
 
   override def start() {
+    //  带哦用了 底层的 backend  的 start()   方法
     backend.start()
 
     if (!isLocal && conf.getBoolean("spark.speculation", false)) {

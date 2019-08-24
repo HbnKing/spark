@@ -41,6 +41,17 @@ import org.apache.spark.util.{RpcUtils, ThreadUtils}
  *
  * @param masterUrls Each url should look like spark://host:port.
  */
+
+/**
+ * AppClient  是一个接口
+ * 它负责为 applcation  和 saprk 集群之间进行通讯
+ * 他会接受一个 sparkurl  和 applicationDescrtion  和 一个 集群时间监听器
+ * @param rpcEnv
+ * @param masterUrls
+ * @param appDescription
+ * @param listener
+ * @param conf
+ */
 private[spark] class StandaloneAppClient(
     rpcEnv: RpcEnv,
     masterUrls: Array[String],
@@ -94,6 +105,7 @@ private[spark] class StandaloneAppClient(
 
     /**
      *  Register with all masters asynchronously and returns an array `Future`s for cancellation.
+     *  获取master地址并注册
      */
     private def tryRegisterAllMasters(): Array[JFuture[_]] = {
       for (masterAddress <- masterRpcAddresses) yield {
@@ -104,6 +116,7 @@ private[spark] class StandaloneAppClient(
             }
             logInfo("Connecting to master " + masterAddress.toSparkURL + "...")
             val masterRef = rpcEnv.setupEndpointRef(masterAddress, Master.ENDPOINT_NAME)
+            //
             masterRef.send(RegisterApplication(appDescription, self))
           } catch {
             case ie: InterruptedException => // Cancelled
@@ -119,6 +132,7 @@ private[spark] class StandaloneAppClient(
      * Once we connect to a master successfully, all scheduling work and Futures will be cancelled.
      *
      * nthRetry means this is the nth attempt to register with master.
+     * 获取master 地址并注册
      */
     private def registerWithMaster(nthRetry: Int) {
       registerMasterFutures.set(tryRegisterAllMasters())
@@ -273,6 +287,7 @@ private[spark] class StandaloneAppClient(
 
   def start() {
     // Just launch an rpcEndpoint; it will call back into the listener.
+    //  启动一个线程
     endpoint.set(rpcEnv.setupEndpoint("AppClient", new ClientEndpoint(rpcEnv)))
   }
 

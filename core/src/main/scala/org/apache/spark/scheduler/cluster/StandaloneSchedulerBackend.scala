@@ -111,9 +111,13 @@ private[spark] class StandaloneSchedulerBackend(
       } else {
         None
       }
+    //ApplicationDescription  记录了一些和当前和应用有关的参数 非常重要
+    // 包括资源的的限制情况  与spark-submit  有关
     val appDesc = ApplicationDescription(sc.appName, maxCores, sc.executorMemory, command,
       webUrl, sc.eventLogDir, sc.eventLogCodec, coresPerExecutor, initialExecutorLimit)
+    // 创建 AppClient  传入了 appDesc
     client = new StandaloneAppClient(sc.env.rpcEnv, masters, appDesc, this, conf)
+    //启动该 client
     client.start()
     launcherBackend.setState(SparkAppHandle.State.SUBMITTED)
     waitForRegistration()

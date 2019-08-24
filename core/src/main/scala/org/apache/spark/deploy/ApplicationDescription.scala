@@ -19,9 +19,30 @@ package org.apache.spark.deploy
 
 import java.net.URI
 
+/**
+ *
+ * @param name
+ * @param maxCores
+ * @param memoryPerExecutorMB
+ * @param command
+ * @param appUiUrl
+ * @param eventLogDir
+ * @param eventLogCodec
+ * @param coresPerExecutor
+ * @param initialExecutorLimit
+ * @param user
+ *
+ * 记录了 该应用 需要多少内存
+ * 一些提交相关的参数记录在这里
+ *
+ */
 private[spark] case class ApplicationDescription(
+    //应用名称
     name: String,
+
+    //最大核心数
     maxCores: Option[Int],
+    //每个内存值 的大小
     memoryPerExecutorMB: Int,
     command: Command,
     appUiUrl: String,

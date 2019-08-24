@@ -293,7 +293,9 @@ class SparkContext(config: SparkConf) extends Logging {
   val sparkUser = Utils.getCurrentUserName()
 
   private[spark] def schedulerBackend: SchedulerBackend = _schedulerBackend
-
+  /**
+   * TaskScheduler  的 getter  和 setter  方法
+   */
   private[spark] def taskScheduler: TaskScheduler = _taskScheduler
   private[spark] def taskScheduler_=(ts: TaskScheduler): Unit = {
     _taskScheduler = ts
@@ -490,7 +492,12 @@ class SparkContext(config: SparkConf) extends Logging {
       HeartbeatReceiver.ENDPOINT_NAME, new HeartbeatReceiver(this))
 
     // Create and start the scheduler
+    /**
+     *  spark  context  创建 taskSchduler
+     *
+     */
     val (sched, ts) = SparkContext.createTaskScheduler(this, master, deployMode)
+    //得到 schedulerBackend  和 taskscheduler
     _schedulerBackend = sched
     _taskScheduler = ts
     _dagScheduler = new DAGScheduler(this)
@@ -498,6 +505,7 @@ class SparkContext(config: SparkConf) extends Logging {
 
     // start TaskScheduler after taskScheduler sets DAGScheduler reference in DAGScheduler's
     // constructor
+    //  tasksheduler 的启动
     _taskScheduler.start()
 
     _applicationId = _taskScheduler.applicationId()
@@ -2712,6 +2720,12 @@ object SparkContext extends Logging {
   /**
    * Create a task scheduler based on a given master URL.
    * Return a 2-tuple of the scheduler backend and the task scheduler.
+   * 创建 taskScheduler
+   * 这里使用的是 模式匹配的方式
+   * 来创建不同的 taskschduler
+   *
+   * 返回的是一个 schedulerbackend 和 taskshceduler  组合 的 tuple
+   *
    */
   private def createTaskScheduler(
       sc: SparkContext,
@@ -2751,10 +2765,12 @@ object SparkContext extends Logging {
         scheduler.initialize(backend)
         (backend, scheduler)
 
+        //  这个是我们常用的 spark  提交模式 中的 standalone  方式
       case SPARK_REGEX(sparkUrl) =>
         val scheduler = new TaskSchedulerImpl(sc)
         val masterUrls = sparkUrl.split(",").map("spark://" + _)
         val backend = new StandaloneSchedulerBackend(scheduler, sc, masterUrls)
+        //  taskscheduler  掉用的 初始化方法
         scheduler.initialize(backend)
         (backend, scheduler)
 

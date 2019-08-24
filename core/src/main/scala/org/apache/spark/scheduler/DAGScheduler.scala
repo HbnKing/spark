@@ -111,6 +111,13 @@ import org.apache.spark.util._
  *
  *  - When adding a new data structure, update `DAGSchedulerSuite.assertDataStructuresEmpty` to
  *    include the new structure. This will help to catch memory leaks.
+ *
+ *实现了 面向stage  的 调度机制的高层次的调度层 他会为每一个job 计算一个STAGE 的 Dag(有向无环图)
+ * 追踪 rdd  和 stage 的输出 是否被物化 并寻找 最优调度机制来运行spark
+ * 除了负责 处理stage  和 Dag  ,他还负责 运行task 的 最佳位置，将这些最佳位置提交给底层的 taskscheduler
+ * 此外 他还会处理因为shuffle  输出文件的丢失导致的任务失败  这种情况下 旧的 stage  可能会被重新提交
+ * 如果只是stage内部的失败，与shuffle  无关 ，则 会被 taskScheduler  处理 ，他会多次 重试 每一个task
+ * 实在不行会取消这个stage
  */
 private[spark] class DAGScheduler(
     private[scheduler] val sc: SparkContext,
