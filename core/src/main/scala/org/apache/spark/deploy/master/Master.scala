@@ -516,6 +516,7 @@ private[deploy] class Master(
     workers.count(_.state == WorkerState.UNKNOWN) == 0 &&
       apps.count(_.state == ApplicationState.UNKNOWN) == 0
 
+  /** master  宕机后 发生的主从节点切换 */
   private def beginRecovery(storedApps: Seq[ApplicationInfo], storedDrivers: Seq[DriverInfo],
       storedWorkers: Seq[WorkerInfo]) {
     for (app <- storedApps) {
@@ -539,6 +540,7 @@ private[deploy] class Master(
       logInfo("Trying to recover worker: " + worker.id)
       try {
         registerWorker(worker)
+        // 全部标记为  unknown
         worker.state = WorkerState.UNKNOWN
         worker.endpoint.send(MasterChanged(self, masterWebUiUrl))
       } catch {
@@ -547,12 +549,19 @@ private[deploy] class Master(
     }
   }
 
+  /**
+   * 完成主备切换  即完成恢复
+   */
   private def completeRecovery() {
     // Ensure "only-once" recovery semantics using a short synchronization period.
+    //  完成状态修改
     if (state != RecoveryState.RECOVERING) { return }
     state = RecoveryState.COMPLETING_RECOVERY
 
     // Kill off any workers and apps that didn't respond to us.
+    //  上一步操作 将所有的worker  已经标记为 unknow  如果 work  没有返回自己的状态来修改自己的标记
+    //  那么这些worker  可能是不可达。他们状态还是 unknown
+    //  清理范围 从内存缓存结构中清除 ，从相关的组件的内存缓存中清除 ，从 持久化的存储中移除 
     workers.filter(_.state == WorkerState.UNKNOWN).foreach(
       removeWorker(_, "Not responding for recovery"))
     apps.filter(_.state == ApplicationState.UNKNOWN).foreach(finishApplication)
@@ -787,6 +796,12 @@ private[deploy] class Master(
     true
   }
 
+  /**
+   *
+   * @param worker
+   * @param msg
+   *            将 worker  从 缓存中移除
+   */
   private def removeWorker(worker: WorkerInfo, msg: String) {
     logInfo("Removing worker " + worker.id + " on " + worker.host + ":" + worker.port)
     worker.setState(WorkerState.DEAD)
@@ -795,14 +810,22 @@ private[deploy] class Master(
 
     for (exec <- worker.executors.values) {
       logInfo("Telling app of lost executor: " + exec.id)
+      //  向  driver 发送 消息
+      //  表明 Executor  丢失 和 worker  丢失
       exec.application.driver.send(ExecutorUpdated(
         exec.id, ExecutorState.LOST, Some("worker lost"), None, workerLost = true))
       exec.state = ExecutorState.LOST
       exec.application.removeExecutor(exec)
     }
+
+    /**
+     * driver.desc.supervise  参数非常重要
+     */
     for (driver <- worker.drivers.values) {
       if (driver.desc.supervise) {
         logInfo(s"Re-launching ${driver.id}")
+        //  设置为 true  时候 master  会从新启动 这个driver
+        // 这个方法 是重新启动 driver
         relaunchDriver(driver)
       } else {
         logInfo(s"Not re-launching ${driver.id} because it was not supervised")
@@ -813,6 +836,7 @@ private[deploy] class Master(
     apps.filterNot(completedApps.contains(_)).foreach { app =>
       app.driver.send(WorkerRemoved(worker.id, worker.host, msg))
     }
+    //  从 持久化的 存储 如 hdfs  zk  中删除 该worker
     persistenceEngine.removeWorker(worker)
   }
 

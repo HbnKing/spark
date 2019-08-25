@@ -22,6 +22,17 @@ import scala.collection.mutable
 import org.apache.spark.rpc.RpcEndpointRef
 import org.apache.spark.util.Utils
 
+/**
+ *
+ * @param id
+ * @param host
+ * @param port
+ * @param cores
+ * @param memory
+ * @param endpoint
+ * @param webUiAddress
+ *  worker  的 一些信息 保存位置
+ */
 private[spark] class WorkerInfo(
     val id: String,
     val host: String,

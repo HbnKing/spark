@@ -56,7 +56,7 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging with Seria
 
   /** Create a SparkConf that loads defaults from system properties and the classpath */
   def this() = this(true)
-
+  /** 内部的数据保存使用 Java内置的 concurrentHashmap  保存数据 */
   private val settings = new ConcurrentHashMap[String, String]()
 
   @transient private lazy val reader: ConfigReader = {
